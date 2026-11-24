@@ -9,10 +9,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Unzip project if uploaded as ZIP
+      - name: Locate project (unzip any uploaded ZIP)
         run: |
-          if [ -f ZENO.zip ]; then unzip -q -o ZENO.zip -d project_src; fi
-          DIR=$(dirname "$(find . -name settings.gradle.kts -not -path './.git/*' | head -n1)")
+          find . -iname "*.zip" -not -path './.git/*' -not -path './project_src/*' | while read -r z; do
+            echo "Unzipping: $z"
+            unzip -q -o "$z" -d project_src || true
+          done
+          SETTINGS=$(find . \( -name settings.gradle.kts -o -name settings.gradle \) -not -path './.git/*' | head -n1)
+          if [ -z "$SETTINGS" ]; then
+            echo "ERROR: no settings.gradle(.kts) found. Repo contents:"
+            find . -not -path './.git/*' -not -path './.git' | head -80
+            exit 1
+          fi
+          DIR=$(dirname "$SETTINGS")
           echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
           echo "Project folder: $DIR"
 
@@ -21,9 +30,8 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Accept Android SDK licenses (SDK is preinstalled on the runner)
+      - name: Accept Android SDK licenses
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       - uses: gradle/actions/setup-gradle@v4
