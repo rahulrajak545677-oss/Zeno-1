@@ -32,9 +32,28 @@ jobs:
 
       - name: Build debug APK
         working-directory: ${{ env.PROJECT_DIR }}
-        run: gradle assembleDebug --stacktrace
+        run: |
+          set +e
+          gradle assembleDebug --console=plain > build.log 2>&1
+          STATUS=$?
+          if [ $STATUS -ne 0 ]; then
+            echo "=== ERRORS (summary) ==="
+            grep -nE "^e: |error:|What went wrong|Could not|Execution failed|Unresolved|Caused by" build.log | head -40
+            echo "=== LAST 40 LINES ==="
+            tail -n 40 build.log
+          fi
+          exit $STATUS
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: ${{ env.PROJECT_DIR }}/build.log
+          if-no-files-found: ignore
 
       - uses: actions/upload-artifact@v4
         with:
           name: ZENO-debug-apk
           path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
