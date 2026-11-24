@@ -14,13 +14,17 @@ jobs:
           if [ -f ZENO.zip ]; then unzip -q -o ZENO.zip -d project_src; fi
           DIR=$(dirname "$(find . -name settings.gradle.kts -not -path './.git/*' | head -n1)")
           echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
+          echo "Project folder: $DIR"
 
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses (SDK is preinstalled on the runner)
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       - uses: gradle/actions/setup-gradle@v4
         with:
